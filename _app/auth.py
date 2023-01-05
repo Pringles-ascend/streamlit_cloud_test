@@ -16,7 +16,7 @@ sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 # hashed_passwords = stauth.Hasher(['123', '456']).generate()
 # print(hashed_passwords)
 
-with open('./config.yaml') as file:
+with open('./_app/config.yaml') as file:
     config = yaml.load(file, Loader=SafeLoader)
 
 authenticator = Authenticate(
