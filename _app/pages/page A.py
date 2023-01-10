@@ -2,6 +2,7 @@ import streamlit as st
 import time
 import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
 import pandas as pd
 
 print("plotting: ", st.session_state.login)
@@ -58,14 +59,86 @@ else:
         # st.write(string_data)
 
         # # Can be used wherever a "file-like" object is accepted:
-        df = pd.read_excel(uploaded_file, engine='openpyxl', header=17)
+        df = pd.read_excel(uploaded_file, engine='openpyxl', header=17, sheet_name='BW')
         df = df.drop(index=0)
         df.columns = df.columns.str.replace('\n', ' ')
         df.columns = df.columns.str.replace('Unnamed: 0', '구분')
         df['구분'] = df['구분'].str.lstrip()
 
 
-        st.write(df.loc[df['구분'] == '생산액', ['전월 실적','당월 실적']])
-        fig = px.bar(df.loc[df['구분'] == '생산액', ['전월 실적','당월 실적']].T, color_discrete_sequence=px.colors.sequential.RdBu, text_auto=True)
+        st.write((df.loc[df['구분'] == '생산액', ['전월 실적','당월 실적']]/100000000).style.format("{:.1f}"))
+        
+        col_a1, col_a2 = st.columns(2)
+    
+        with col_a1:
+            
+            
+            value_1 = df.loc[df['구분'] == '생산액', ['전월 실적','당월 실적']].values[0][0] / 100000000
+            value_2 = df.loc[df['구분'] == '생산액', ['전월 실적','당월 실적']].values[0][1] / 100000000
+
+            fvalue_1 = format(round(df.loc[df['구분'] == '생산액', ['전월 실적','당월 실적']].values[0][0], 2), ',f')
+            fvalue_2 = format(round(df.loc[df['구분'] == '생산액', ['전월 실적','당월 실적']].values[0][1]), ',d')
+            differ = df.loc[df['구분'] == '생산액', ['전월 실적','당월 실적']].values[0][1]/df.loc[df['구분'] == '생산액', ['전월 실적','당월 실적']].values[0][0] - 1
+
+            fig = go.Figure(data=[
+                go.Bar(name='전월', x=['전월'], y=[value_1],
+                text=[f'{value_1:,.1f}'],
+                textposition='outside',
+                textfont_size=18,
+                marker_color='blue'
+                ),
+
+                go.Bar(name='당월', x=['당월'], y=[value_2],
+                text=[f'{value_2:,.1f}<br>(+{differ:.2%})' if differ >=0 else f'{fvalue_2}<br>(-{differ}%)' ],
+                textposition='outside',
+                textfont_size=18,
+                marker_color='red'
+                )
+            ]
+
+            )
+            fig.update_yaxes(range=[min([value_1, value_2])*0.5, max([value_1, value_2])*1.2])
+            st.plotly_chart(fig)
+
+
+        with col_a2:
+
+            value_3 = df.loc[df['구분'] == '생산량', ['전월 실적','당월 실적']].values[0][0] / 1000
+            value_4 = df.loc[df['구분'] == '생산량', ['전월 실적','당월 실적']].values[0][1] / 1000
+
+            fig2 = go.Figure(data=[
+                go.Bar(name='전월', x=['전월'], y=[value_3],
+                text=[f'{value_3:,.1f}'],
+                textposition='outside',
+                textfont_size=18,
+                marker_color='blue'
+                ),
+                
+
+
+                go.Bar(name='당월', x=['당월'], y=[value_4],
+                text=[f'{value_4:,.1f}<br>(+{differ:.2%})' if differ >=0 else f'{fvalue_2}<br>(-{differ}%)' ],
+                textposition='outside',
+                textfont_size=18,
+                marker_color='red'
+                )
+            ]
+
+            )
+            fig2.update_yaxes(range=[min([value_3, value_4])*0.5, max([value_3, value_4])*1.2])
+            st.plotly_chart(fig2)
+
+        df2 = pd.read_excel(uploaded_file, sheet_name='Trend', engine='openpyxl')
+
+        
+        fig = go.Figure(data=[
+            go.Scatter(name='생산액', x=df2.columns[1:], y=df2.loc[df2['구분'] == '생산액'].values[0][1:], mode='lines+markers+text',
+            text=df2.loc[df2['구분'] == '생산액'].values[0][1:], textposition='top center'),
+            go.Scatter(name='생산량', x=df2.columns[1:], y=df2.loc[df2['구분'] == '생산량'].values[0][1:], mode='lines+markers'),
+        ])
+
+        fig.update_yaxes(range=[0,max(df2.loc[df2['구분'] == '생산량'].values[0][1:])*1.2])
+        fig.update_layout(width=1200, height=500)
+
         st.plotly_chart(fig)
 
