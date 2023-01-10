@@ -66,6 +66,6 @@ else:
 
 
         st.write(df.loc[df['구분'] == '생산액', ['전월 실적','당월 실적']])
-        fig = px.bar(df.loc[df['구분'] == '생산액', ['전월 실적','당월 실적']].T, color_discrete_sequence=px.colors.sequential.RdBu)
+        fig = px.bar(df.loc[df['구분'] == '생산액', ['전월 실적','당월 실적']].T, color_discrete_sequence=px.colors.sequential.RdBu, text_auto=True)
         st.plotly_chart(fig)
 
