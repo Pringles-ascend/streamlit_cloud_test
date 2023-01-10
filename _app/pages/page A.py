@@ -1,7 +1,7 @@
 import streamlit as st
 import time
 import numpy as np
-
+import plotly.express as px
 
 print("plotting: ", st.session_state.login)
 
@@ -39,3 +39,22 @@ else:
     # this button is not connected to any other logic, it just causes a plain
     # rerun.
     st.button("Re-run")
+
+
+    path = r'M:\Users\LGCARE\Documents\download\SAP5WIRSLW8HK3NZESFI3SJ0H7SK.xls'
+
+    df = pd.read_excel(r'M:\Users\LGCARE\Documents\read_test.xlsx', engine='openpyxl', header=17)
+    df = df.drop(index=0)
+
+    df.columns = df.columns.str.replace('\n', ' ')
+    df.columns = df.columns.str.replace('Unnamed: 0', '구분')
+    df['구분'] = df['구분'].str.lstrip()
+
+    print(df)
+
+    print(df['구분'])
+
+    fig = px.bar(df.loc[df['구분'] == '생산액', ['전월 실적','당월 실적']], color_discrete_sequence=px.colors.sequential.RdBu)
+
+    st.plotly_chart(fig)
+
