@@ -4,6 +4,10 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
+from st_aggrid import AgGrid, GridUpdateMode, ColumnsAutoSizeMode
+from st_aggrid.grid_options_builder import GridOptionsBuilder
+from st_aggrid.shared import JsCode
+
 
 
 st.set_page_config(page_title="Plotting Demo", page_icon="📈", layout="wide")
@@ -17,7 +21,7 @@ st.write(
 
 
 with st.sidebar:
-    amount_unit = st.radio("", options=('물량', '수량'), label_visibility='hidden', key='amount_unit', horizontal=True)
+    amount_unit = st.radio(" ", options=('물량', '수량'), label_visibility='hidden', key='amount_unit', horizontal=True)
     uploaded_file = st.file_uploader("양식 파일을 업로드해주세요", type="xlsx")
     
 
@@ -32,12 +36,12 @@ if uploaded_file is not None:
 
     for idx, prod in enumerate(prod_family):
         df_BW_PY = pd.read_excel(r'M:\Users\LGCARE\Documents\read_test.xlsx', sheet_name=f'BW_{prod_family[idx]}', engine='openpyxl', header=1, nrows=75, index_col=0)
-        df_BW_PY.dropna(how='all', inplace=True)
+        # df_BW_PY.dropna(how='all', inplace=True)
         df_BW_PY.fillna(0, inplace=True)
         df_BW_PY.index = df_BW_PY.index.str.lstrip()
 
         df_BW_CY = pd.read_excel(r'M:\Users\LGCARE\Documents\read_test.xlsx', sheet_name=f'BW_{prod_family[idx]}', engine='openpyxl', header=80, nrows=75, index_col=0)
-        df_BW_CY.dropna(how='all', inplace=True)
+        # df_BW_CY.dropna(how='all', inplace=True)
         df_BW_CY.fillna(0, inplace=True)
         df_BW_CY.index = df_BW_CY.index.str.lstrip()
 
@@ -348,13 +352,192 @@ if uploaded_file is not None:
 
                     st.plotly_chart(fig, use_container_width=False, theme=None)
 
+                
+                df_total = pd.DataFrame(columns=['구분','금액_전기','구성비_전기','금액_당기','구성비_당기','증감금액','구성비_증감'])
+                
+
+                index_total = ['실질 생산액','원재료비','용기/포장비','전력/연료비','외주가공비','기타','변동비 계',\
+                    '임금/급료','제조관리 인건비','감가상각비','소모/수선비','경상개발비','반제품차','기 타', '고정비 계','제조원가']
+                df_total['구분'] = index_total
+                df_total.set_index('구분', inplace=True)
+
+                if num_selected_month ==1:
+                    df_total.loc[:,'금액_전기'] = np.array(
+                        [df_BW_PY.loc['생산액', [f'12월']].values[0],
+                        df_BW_PY.loc['원재료비', [f'12월']].values[0] + df_BW_PY.loc['재료비:상품', [f'12월']].values[0],
+                        df_BW_PY.loc['용기부품비', [f'12월']].values[0] + df_BW_PY.loc['매입부품비', [f'12월']].values[0] + df_BW_PY.loc['포장비', [f'12월']].values[0],
+                        df_BW_PY.loc['전력비', [f'12월']].values[0] + df_BW_PY.loc['연료비', [f'12월']].values[0],
+                        df_BW_PY.loc['외주가공비', [f'12월']].values[0] + df_BW_PY.loc['사외 외주가공비', [f'12월']].values[0],
+                        df_BW_PY.loc['소모품비', [f'12월']].values[0] + df_BW_PY.loc['사용료', [f'12월']].values[0] + df_BW_PY.loc['세금과공과', [f'12월']].values[0],
+                        0,
+                        df_BW_PY.loc['급료', [f'12월']].values[0] + df_BW_PY.loc['임금', [f'12월']].values[0]+ df_BW_PY.loc['상여금', [f'12월']].values[0]+df_BW_PY.loc['퇴직급여', [f'12월']].values[0]+df_BW_PY.loc['복리후생비', [f'12월']].values[0],
+                        df_BW_PY.loc['청주.제조관리-인건비', [f'12월']].values[0]+df_BW_PY.loc['청주.간접 인건비', [f'12월']].values[0],
+                        df_BW_PY.loc['감가상각비', [f'12월']].values[0]+df_BW_PY.loc['무형상각비', [f'12월']].values[0],
+                        df_BW_PY.loc['수선비', [f'12월']].values[0] + df_BW_PY.loc['소모품비', [f'12월']].values[0],
+                        df_BW_PY.loc['경상개발비', [f'12월']].values[0],
+                        df_BW_PY.loc['기초 반제품 재고', [f'12월']].values[0] + df_BW_PY.loc['타계정 대체', [f'12월']].values[0] - df_BW_PY.loc['기말 반제품 재고', [f'12월']].values[0],
+                        df_BW_PY.loc[['여비교통비','통신비','수도광열비','임차료','지급용역료','차량관리비','보험료','교제비','광고비','운반비','도서인쇄비','교육훈련비','회의비','연구비','잡비','청주.제조관리-상각비','청주.제조관리-기타'], [f'12월']].values.sum(),
+                        0,
+                        0])/1_000_000
+
+                else:
+                    df_total.loc[:,'금액_전기'] = np.array(
+                        [df_BW_CY.loc['생산액', [f'{num_selected_month-1}월']].values[0],
+                        df_BW_CY.loc['원재료비', [f'{num_selected_month-1}월']].values[0] + df_BW_CY.loc['재료비:상품', [f'{num_selected_month-1}월']].values[0],
+                        df_BW_CY.loc['용기부품비', [f'{num_selected_month-1}월']].values[0] + df_BW_CY.loc['매입부품비', [f'{num_selected_month-1}월']].values[0] + df_BW_CY.loc['포장비', [f'{num_selected_month-1}월']].values[0],
+                        df_BW_CY.loc['전력비', [f'{num_selected_month-1}월']].values[0] + df_BW_CY.loc['연료비', [f'{num_selected_month-1}월']].values[0],
+                        df_BW_CY.loc['외주가공비', [f'{num_selected_month-1}월']].values[0] + df_BW_CY.loc['사외 외주가공비', [f'{num_selected_month-1}월']].values[0],
+                        df_BW_CY.loc['사용료', [f'{num_selected_month-1}월']].values[0] + df_BW_CY.loc['세금과공과', [f'{num_selected_month-1}월']].values[0],
+                        0,
+                        df_BW_CY.loc['급료', [f'{num_selected_month-1}월']].values[0] + df_BW_CY.loc['임금', [f'{num_selected_month-1}월']].values[0]+ df_BW_CY.loc['상여금', [f'{num_selected_month-1}월']].values[0]+df_BW_CY.loc['퇴직급여', [f'{num_selected_month-1}월']].values[0]+df_BW_CY.loc['복리후생비', [f'{num_selected_month-1}월']].values[0],
+                        df_BW_CY.loc['청주.제조관리-인건비', [f'{num_selected_month-1}월']].values[0]+df_BW_CY.loc['청주.간접 인건비', [f'{num_selected_month-1}월']].values[0],
+                        df_BW_CY.loc['감가상각비', [f'{num_selected_month-1}월']].values[0]+df_BW_CY.loc['무형상각비', [f'{num_selected_month-1}월']].values[0],
+                        df_BW_CY.loc['수선비', [f'{num_selected_month-1}월']].values[0] + df_BW_CY.loc['소모품비', [f'{num_selected_month-1}월']].values[0],
+                        df_BW_CY.loc['경상개발비', [f'{num_selected_month-1}월']].values[0],
+                        df_BW_CY.loc['기초 반제품 재고', [f'{num_selected_month-1}월']].values[0] + df_BW_CY.loc['타계정 대체', [f'{num_selected_month-1}월']].values[0] - df_BW_CY.loc['기말 반제품 재고', [f'{num_selected_month-1}월']].values[0],
+                        df_BW_CY.loc[['여비교통비','통신비','수도광열비','임차료','지급수수료','지급용역료','차량관리비','보험료','교제비','광고비','운반비','도서인쇄비','교육훈련비','회의비','연구비','잡비','청주.제조관리-상각비','청주.제조관리-기타','청주.간접 기타'], [f'{num_selected_month-1}월']].values.sum(),
+                        0,
+                        0])/1_000_000
+
+                df_total.loc[:,'금액_당기'] = np.array(
+                    [df_BW_CY.loc['생산액', [f'{num_selected_month}월']].values[0],
+                    df_BW_CY.loc['원재료비', [f'{num_selected_month}월']].values[0] + df_BW_CY.loc['재료비:상품', [f'{num_selected_month}월']].values[0],
+                    df_BW_CY.loc['용기부품비', [f'{num_selected_month}월']].values[0] + df_BW_CY.loc['매입부품비', [f'{num_selected_month}월']].values[0] + df_BW_CY.loc['포장비', [f'{num_selected_month}월']].values[0],
+                    df_BW_CY.loc['전력비', [f'{num_selected_month}월']].values[0] + df_BW_CY.loc['연료비', [f'{num_selected_month}월']].values[0],
+                    df_BW_CY.loc['외주가공비', [f'{num_selected_month}월']].values[0] + df_BW_CY.loc['사외 외주가공비', [f'{num_selected_month}월']].values[0],
+                    df_BW_CY.loc['사용료', [f'{num_selected_month}월']].values[0] + df_BW_CY.loc['세금과공과', [f'{num_selected_month}월']].values[0],
+                    0,
+                    df_BW_CY.loc['급료', [f'{num_selected_month}월']].values[0] + df_BW_CY.loc['임금', [f'{num_selected_month}월']].values[0]+ df_BW_CY.loc['상여금', [f'{num_selected_month}월']].values[0]+df_BW_CY.loc['퇴직급여', [f'{num_selected_month}월']].values[0]+df_BW_CY.loc['복리후생비', [f'{num_selected_month}월']].values[0],
+                    df_BW_CY.loc['청주.제조관리-인건비', [f'{num_selected_month}월']].values[0]+df_BW_CY.loc['청주.간접 인건비', [f'{num_selected_month}월']].values[0],
+                    df_BW_CY.loc['감가상각비', [f'{num_selected_month}월']].values[0]+df_BW_CY.loc['무형상각비', [f'{num_selected_month}월']].values[0],
+                    df_BW_CY.loc['수선비', [f'{num_selected_month}월']].values[0] + df_BW_CY.loc['소모품비', [f'{num_selected_month}월']].values[0],
+                    df_BW_CY.loc['경상개발비', [f'{num_selected_month}월']].values[0],
+                    df_BW_CY.loc['기초 반제품 재고', [f'{num_selected_month}월']].values[0] + df_BW_CY.loc['타계정 대체', [f'{num_selected_month}월']].values[0] - df_BW_CY.loc['기말 반제품 재고', [f'{num_selected_month}월']].values[0],
+                    df_BW_CY.loc[['여비교통비','통신비','수도광열비','임차료','지급수수료','지급용역료','차량관리비','보험료','교제비','광고비','운반비','도서인쇄비','교육훈련비','회의비','연구비','잡비','청주.제조관리-상각비','청주.제조관리-기타','청주.간접 기타'], [f'{num_selected_month}월']].values.sum(),
+                    0,
+                    0])/1_000_000
+
+                df_total.loc[:,'구성비_전기'] = df_total.loc[:,'금액_전기'] / df_BW_CY.loc['생산액', [f'{num_selected_month-1}월']].values[0] *100 * 1_000_000
+                df_total.loc[:,'구성비_당기'] = df_total.loc[:,'금액_당기'] / df_BW_CY.loc['생산액', [f'{num_selected_month}월']].values[0] *100 * 1_000_000
+                df_total.loc[:,'증감금액'] = df_total.loc[:,'금액_당기'] - df_total.loc[:,'금액_전기']
+                df_total.loc[:,'구성비_증감'] = df_total.loc[:,'구성비_당기'] - df_total.loc[:,'구성비_전기']
+
+                df_total.loc['변동비 계',:] = df_total.loc[['원재료비','용기/포장비','전력/연료비','외주가공비','기타'],:].sum()
+                df_total.loc['고정비 계',:] = df_total.loc[['임금/급료','제조관리 인건비','감가상각비','소모/수선비','경상개발비','반제품차','기 타'],:].sum()
+                df_total.loc['제조원가',:] = df_total.loc[['변동비 계','고정비 계'],:].sum()
 
                 
-            
-            
-            
+                print(df_total)
+
+                df_total.reset_index().loc[:4].style.set_properties(**{'background-color': 'white',
+                            'color': 'lawngreen',
+                            'border-color': 'white'})
+                st.write("증감 분석")
+                st.dataframe(df_total.reset_index().style.format({'구성비_전기':'{:,.1f}', '구성비_당기':'{:,.1f}', '구성비_증감':'{:,.1f}', '금액_전기':'{:,.0f}', '금액_당기':'{:,.0f}', '증감금액':'{:,.0f}'})\
+                    .set_properties(subset = pd.IndexSlice[[0], :], **{'background-color' : 'rgb(190,200,255)', 'font-weight': 'bold', 'border-color': 'white'}, color="black")\
+                    .set_properties(subset = pd.IndexSlice[[6,14], :], **{'background-color' : 'orange',"font-weight": "bold"}, color="black")\
+                    .set_properties(subset = pd.IndexSlice[[15], :], **{'background-color' : 'green'}, color="black", **{"font-weight": "bold"})\
+                    .set_properties(subset = pd.IndexSlice[[1,2], :], **{'background-color' : 'white'}, color="black", **{"font-weight": "bold"})\
+                    .set_properties(**{'font-size': '25pt'})\
+                    .hide(axis='index'), height=598
+                )
+                
+                def display_table(df, fit_columns_on_grid_load=False, sidebar=True, height=496, key=None):
+                    gb = GridOptionsBuilder.from_dataframe(df)
+
+                    if sidebar:
+                        gb.configure_side_bar()
+                    
+                    gb.configure_grid_options(
+                        enableRangeSelection=True,
+                        rowSelection='multiple',
+                        rowMultiSelectWithClick=True,
+                        suppressFieldDotNotation=True, autoSizeAllColumns=True,
+                    )
+                    
+                    jscode = JsCode("""                                             
+                        function(params) {
+                            if (params.data.구분 ===("실질 생산액")) {
+                                return {
+                                    'color': 'black',
+                                    'backgroundColor': 'rgb(190,200,255)',
+                                    'fontWeight': 'bold',
+                                    'font-size': '14px'
+
+                                }
+                            }
+                            if (params.data.구분 ===("변동비 계") || params.data.구분 === ("고정비 계")) {
+                                return {
+                                    'color': 'black',
+                                    'backgroundColor': 'orange',
+                                    'fontWeight': 'bold',
+                                    'font-size': '14px'
+                                }
+                            }
+                            if (params.data.구분 ===("제조원가")) {
+                                return {
+                                    'color': 'white',
+                                    'backgroundColor': 'green',
+                                    'fontWeight': 'bold',
+                                    'font-size': '14px'
+                                }
+                            }                      
+                        };               
+                        
+                    """)
+
+                    custom_css = {
+                        ".ag-theme-balham-dark": {"--ag-header-foreground-color": "white"},
+                        ".ag-header-cell-label": {"justify-content": "center", "font-size": '12px'},
+                        "body": {"text-align": "center"}
+                        }
+                    
 
 
+                    gb.configure_default_column(min_column_width=10, headerClass={'header-background-color': 'deeppink'}, cellStyle={'border': '0.000001px groove','border-color':'Silver'})
+                    # gb.configure_default_column(min_column_width=10, headerClass={'align': "ag-center-aligned-header"}, cellStyle={'border': '0.000001px groove'})
+
+                    # gb.configure_columns(column_names=df.columns, initialWidth=100, resizable=True, flex=5)
+                    gb.configure_columns(column_names=df.columns, resizable=True,)
+                    gb.configure_column("구분", width=120, suppressMenu=True, )
+                    gb.configure_column("금액_전기", type=["numericColumn",], width=81, suppressMenu=True, valueGetter="data.금액_전기.toLocaleString('en-US', {style: 'decimal', maximumFractionDigits:0})")
+                    gb.configure_column("금액_당기", type=["numericColumn",], width=81, suppressMenu=True, valueGetter="data.금액_당기.toLocaleString('en-US', {style: 'decimal', maximumFractionDigits:0})")
+                    gb.configure_column("증감금액", type=["numericColumn",], width=76, suppressMenu=True, valueGetter="data.증감금액.toLocaleString('en-US', {style: 'decimal', maximumFractionDigits:0})")
+                    gb.configure_column("구성비_전기", type=["numericColumn",], width=96, suppressMenu=True, valueGetter="data.구성비_전기.toLocaleString('en-US', {style: 'decimal', maximumFractionDigits:1})")
+                    gb.configure_column("구성비_당기", type=["numericColumn",], width=96, suppressMenu=True, valueGetter="data.구성비_당기.toLocaleString('en-US', {style: 'decimal', maximumFractionDigits:1})")
+                    gb.configure_column("구성비_증감", type=["numericColumn",], width=96, suppressMenu=True, valueGetter="data.구성비_증감.toLocaleString('en-US', {style: 'decimal', maximumFractionDigits:1})")
+                    
+                    # gb.configure_column("금액_전기", editable=True)
+
+                    
+
+                    gridOptions = gb.build()
+                    print(jscode)
+                    print(gridOptions)
+                    gridOptions['getRowStyle'] = jscode
+                    
+
+                    return AgGrid(df, gridOptions=gridOptions, enable_enterprise_modules=True, height=height, fit_columns_on_grid_load=fit_columns_on_grid_load, key=key, allow_unsafe_jscode=True,\
+                        theme='balham', update_mode=GridUpdateMode.NO_UPDATE,custom_css=custom_css,)
+
+                    # return AgGrid(df, gridOptions=gridOptions, enable_enterprise_modules=True, width='80%', height=height, fit_columns_on_grid_load=fit_columns_on_grid_load, key=key, allow_unsafe_jscode=True,\
+                    #     theme='streamlit', update_mode=GridUpdateMode.NO_UPDATE, columns_auto_size_mode=ColumnsAutoSizeMode.FIT_CONTENTS)  
+
+
+                col_test_1, col_test_2 = st.columns([48.5,51.5])
+
+                with col_test_1:
+                    display_table(df_total.reset_index(), fit_columns_on_grid_load=False, sidebar=False)
+                with col_test_2:
+                    st.empty()
+
+                
+                # .set_table_styles({"실질 생산액": [{'selector': 'th', 'props': 'background-color: green'}]}, axis=1))
+            # st.dataframe(df_total.style.format({'%_전기':'{:,.2f}', '%_당기':'{:,.2f}', '%_증감':'{:,.2f}'}).apply(row_color, axis=1, subset=df_total.index[0]))
+            # st.dataframe(df_total)
+            
+            # df_BW_CY
+                
 
 
 
@@ -1083,8 +1266,10 @@ if uploaded_file is not None:
 
             tabs_data = st.tabs(lst_data_tab)
             with tabs_data[1]:
+                df_BW_PY.dropna(how='all', inplace=True)
                 st.dataframe(df_BW_PY.style.format("{:,.0f}"))
             with tabs_data[2]:
+                df_BW_CY.dropna(how='all', inplace=True)
                 st.dataframe(df_BW_CY.style.format("{:,.0f}"))
 
             
