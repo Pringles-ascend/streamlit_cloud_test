@@ -11,29 +11,26 @@ from streamlit_extras.chart_container import chart_container
 
 
 
-st.set_page_config(page_title="Plotting Demo", page_icon="📈", layout="wide")
+st.set_page_config(page_title="Plotting Demo", page_icon="📈", layout="wide", initial_sidebar_state='collapsed')
 
 st.markdown("# 제조원가 분석 test version")
-st.sidebar.header("파일 업로드")
-st.write(
-    """....제조원가 분석 WEB page 테스트 버전 입니다...."""
-)
+
+title_col = st.columns(4)
+
+with title_col[0]:
+    with st.expander('click to show/hide', expanded=True):
+        uploaded_file = st.file_uploader("양식 파일을 업로드해주세요", type="xlsx")
 
 
-
-with st.sidebar:
-    amount_unit = st.radio(" ", options=('물량', '수량'), label_visibility='hidden', key='amount_unit', horizontal=True)
-    uploaded_file = st.file_uploader("양식 파일을 업로드해주세요", type="xlsx")
-    
 
 if uploaded_file is not None:
     
+    amount_unit = st.radio(" ", options=('물량', '수량'), label_visibility='hidden', key='amount_unit', horizontal=True)
     df_info = pd.read_excel(r'M:\Users\LGCARE\Documents\read_test.xlsx', engine='openpyxl', sheet_name='info', header=None, index_col=0)
     team_name = [value for value in df_info.loc['팀',:].values if value is not np.nan][0]
     prod_family = [value for value in df_info.loc['구분',:].values if value is not np.nan]
 
     tabs = st.tabs(prod_family)
-
 
     for idx, prod in enumerate(prod_family):
         df_BW_PY = pd.read_excel(r'M:\Users\LGCARE\Documents\read_test.xlsx', sheet_name=f'BW_{prod_family[idx]}', engine='openpyxl', header=1, nrows=75, index_col=0)
@@ -130,7 +127,7 @@ if uploaded_file is not None:
                         ),
 
                         go.Bar(name='당월', x=['당월'], y=[value_2],
-                        text=[f'{fvalue_2:,.1f}' if differ >=0 else f'{fvalue_2}' ],
+                        text=[f'{fvalue_2:,.1f}'],
                         textposition='outside',
                         textfont_size=18,
                         marker_color='red',
@@ -218,7 +215,7 @@ if uploaded_file is not None:
                         ),
 
                         go.Bar(name='당월', x=['당월'], y=[value_2],
-                        text=[f'{fvalue_2:,.0f}' if differ >=0 else f'{fvalue_2}' ],
+                        text=[f'{fvalue_2:,.0f}'],
                         textposition='outside',
                         textfont_size=18,
                         marker_color='red',
@@ -305,7 +302,7 @@ if uploaded_file is not None:
                         ),
 
                         go.Bar(name='당월', x=['당월'], y=[value_2],
-                        text=[f'{fvalue_2:,.1%}' if differ >=0 else f'{fvalue_2:,.1%}' ],
+                        text=[f'{fvalue_2:,.1%}'],
                         textposition='outside',
                         textfont_size=18,
                         marker_color='red',
@@ -361,24 +358,48 @@ if uploaded_file is not None:
                     st.plotly_chart(fig, use_container_width=True, theme=None)
 
                 with col_a4:
+
+                    if num_selected_month == 1:
+                        volume_1 = df_trend_PY.loc[['생산량'], ['12월']].values[0][0]
+                        inMhr_1 = df_trend_PY.loc[['자사_Mhr'], ['12월']].values[0][0]
+                        outMhr_1 = df_trend_PY.loc[['외주_Mhr'], ['12월']].values[0][0]
+
+                    else:
+                        volume_1 = df_trend_PY.loc[['생산량'], [f'{num_selected_month-1}월']].values[0][0]
+                        inMhr_1 = df_trend_PY.loc[['자사_Mhr'], [f'{num_selected_month-1}월']].values[0][0]
+                        outMhr_1 = df_trend_PY.loc[['외주_Mhr'], [f'{num_selected_month-1}월']].values[0][0]
+
+                    volume_2 = df_trend_PY.loc[['생산량'], [f'{num_selected_month}월']].values[0][0]
+                    inMhr_2 = df_trend_PY.loc[['자사_Mhr'], [f'{num_selected_month}월']].values[0][0]
+                    outMhr_2 = df_trend_PY.loc[['외주_Mhr'], [f'{num_selected_month}월']].values[0][0]
+
+
+                    value_1 = round(volume_1 / (inMhr_1 + outMhr_1), 0)
+                    value_2 = round(volume_2 / (inMhr_2 + outMhr_2), 0)
+
+                    fvalue_1 = float(value_1)
+                    fvalue_2 = float(value_2)
+
+                    differ = fvalue_2/fvalue_1 - 1
+                    ndiffer = fvalue_2 - fvalue_1
                     
                     fig = go.Figure(data=[
                         go.Bar(name='전월', x=['전월'], y=[value_1],
-                        text=[f'{fvalue_1:,.1f}'],
+                        text=[f'{fvalue_1:,.0f}'],
                         textposition='outside',
                         textfont_size=18,
                         marker_color='blue',
                         width=0.5,
-                        hovertemplate = '전월: %{y:.1f}<extra></extra>',
+                        hovertemplate = '전월: %{y:.0f}<extra></extra>',
                         ),
 
                         go.Bar(name='당월', x=['당월'], y=[value_2],
-                        text=[f'{fvalue_2:,.1f}' if differ >=0 else f'{fvalue_2}' ],
+                        text=[f'{fvalue_2:,.0f}'],
                         textposition='outside',
                         textfont_size=18,
                         marker_color='red',
                         width=0.5,
-                        hovertemplate = '당월: %{y:.1f}<extra></extra>',
+                        hovertemplate = '당월: %{y:.0f}<extra></extra>',
                         )
                     ]
                     )
@@ -387,7 +408,7 @@ if uploaded_file is not None:
 
                     fig.update_layout(
                         title={
-                            'text': "생산액_당월",
+                            'text': "생산성_당월",
                             # 'y':0.2,
                             'x':0.5,
                             'xanchor': 'center',
@@ -401,19 +422,19 @@ if uploaded_file is not None:
                             showlegend=False,
                             margin=dict(l=80, r=80, t=50, b=20),
                             width=400, height=250,
-                            yaxis_title="<b>생산액(억원)</b>",
+                            yaxis_title="<b>생산성(톤, 천개/Mhr)</b>",
                             
                             annotations=[dict(
                                 x='당월',
                                 y=max([fvalue_1, fvalue_2])*1.1,
-                                text=f'{ndiffer:,.1f}<br>(+{differ:.1%})</b>' if differ >=0 else f'<b>{ndiffer:,.1f}<br>({differ:.1%})',
+                                text=f'{ndiffer:,.0f}<br>(+{differ:.1%})</b>' if differ >=0 else f'<b>{ndiffer:,.0f}<br>({differ:.1%})',
                                 font=dict(color='rgb(0,176,240)' if ndiffer >= 0 else 'red', size=18),
                                 showarrow=False,
                                 xshift=-60,
                                 yshift=15,
 
-                            )]
-                            
+                            )],
+                            yaxis_tickformat = ','
                             
                             )
 
@@ -508,12 +529,16 @@ if uploaded_file is not None:
                 df_total.loc['제조원가',:] = df_total.loc[['변동비 계','고정비 계'],:].sum()
 
                 ### 제조원가 분석 표 ###
-                df_anl = pd.DataFrame(columns=['구분','항목','증가요인','감소요인','계'])
-                df_anl.loc[:,'구분'] = ['전기', '외부요인', '', '', '', '', '', '',\
-                    '공장요인', '', '', '', '', '', '', '', '', '당기']
-                df_anl.loc[:,'항목'] = ['전기','원부자재','P-Mix차','고정비영향','판가영향','외주가공비','기타','외부요인 소계',\
+                df_anl = pd.DataFrame(columns=['구분','증가요인','감소요인','계'])
+                
+                df_anl.loc[:,'구분'] = ['전기','원부자재','P-Mix차','고정비영향','판가영향','외주가공비','기타','외부요인 소계',\
                     '원가절감','외주가공비','인건비','전력/연료비','소모수선비','소모수선비','기 타','기 타','공장요인 소계','당기']
 
+                amount_P = round(df_trend_PY.loc[['생산량'], ['12월']].values[0][0]/1_000, 0) if num_selected_month == 1 else round(df_trend_CY.loc[['생산량'], [f'{num_selected_month-1}월']].values[0][0]/1_000, 0)
+                
+                df_anl.loc[:, '증가요인'] = [f'전월 생산량: {amount_P:,.0f}',\
+                    '','','','','','','8','','','','','','','','','','']
+                # df_anl.loc[:, '감소요인'] = ['전월 생']
                 df_anl.set_index('구분', inplace=True)
 
 
@@ -548,7 +573,7 @@ if uploaded_file is not None:
                     
                     jscode = JsCode("""                                             
                         function(params) {
-                            if (params.data.구분 ===("실질 생산액")) {
+                            if (params.data.구분 === "실질 생산액") {
                                 return {
                                     'color': 'black',
                                     'backgroundColor': 'rgb(190,200,255)',
@@ -629,7 +654,7 @@ if uploaded_file is not None:
                     
                     jscode = JsCode("""                                             
                         function(params) {
-                            if (params.data.구분 ===("실질 생산액")) {
+                            if (params.data.구분 === "전기" || params.data.구분 === "당기")  {
                                 return {
                                     'color': 'black',
                                     'backgroundColor': 'rgb(190,200,255)',
@@ -638,7 +663,7 @@ if uploaded_file is not None:
 
                                 }
                             }
-                            if (params.data.구분 ===("변동비 계") || params.data.구분 === ("고정비 계")) {
+                            if (params.data.구분 ===("외부요인 소계") || params.data.구분 === ("공장요인 소계")) {
                                 return {
                                     'color': 'black',
                                     'backgroundColor': 'orange',
@@ -663,6 +688,7 @@ if uploaded_file is not None:
                         ".ag-header-cell-label": {"justify-content": "center", "font-size": '12px'},
                         "body": {"text-align": "center"},
                         ".cell-span": {"background-color": "#0E1117", 'border-bottom': 'solid 0.5px', 'border-bottom-color':'#303239'},
+                        ".ag-theme-streamlit-dark": {'--ag-header-foreground-color': '#fff'}
                         }
                     
                     string_to_add_row = "\n\n function(e) { \n \
@@ -671,6 +697,7 @@ if uploaded_file is not None:
                         api.applyTransaction({addIndex: rowIndex, add: [{}]}); \n \
                         api.deselectAll(); \n \
                         api.refreshCells({force : true}); \n \
+                        api.redrawRows(); \
                             }; \n \n"
 
                     cell_button_add = JsCode('''
@@ -824,7 +851,7 @@ if uploaded_file is not None:
                     
                     # gb.configure_column("금액_전기", editable=True)
 
-                    
+                    gb.configure_column('구분', cellStyle=jscode)
 
                     gridOptions = gb.build()
                     print(jscode)
@@ -832,45 +859,148 @@ if uploaded_file is not None:
                     gridOptions['getRowStyle'] = jscode
 
                     
-                    rowspan = JsCode("""                                             
-                        function getRowSpan(params) {
-                            var rowspan1 = params.api.getModel().getRowCount();
-                            var value = params.data.구분;
-                            if (value === '외부요인') {
-                                return rowspan1;
-                            } else if (value === '공장요인') {
-                                return rowspan1;
-                            } else {
-                                return 1;
-                            }
-                            }         
-                    """)
+                    # rowspan = JsCode("""                                             
+                    #     function getRowSpan(params) {
+                    #         var numRowspan = params.api.getModel().getRowCount();
+                    #         var rowIndex;
+
+                    #         params.api.forEachNode(function(node) {
+                    #             var rowData = node.data;
+
+                    #             if (rowData.항목 === '원부자재') {
+                    #                 rowIndex = params.api.getRowNode(node.id).rowIndex;
+                    #             }
+                    #         });
+                    #         var rowspan1 = rowIndex;
+
+                    #         params.api.forEachNode(function(node) {
+                    #             var rowData = node.data;
+
+                    #             if (rowData.항목 === '원가절감') {
+                    #                 rowIndex = params.api.getRowNode(node.id).rowIndex;
+                    #             }
+                    #         });
+                    #         var rowspan2 = rowIndex;
+
+                    #         var valRowspan1 = rowspan2 - rowspan1;
+
+                    #         params.api.forEachNode(function(node) {
+                    #             var rowData = node.data;
+
+                    #             if (rowData.항목 === '원가절감') {
+                    #                 rowIndex = params.api.getRowNode(node.id).rowIndex;
+                    #             }
+                    #         });
+                    #         var rowspan3 = rowIndex;
+
+                    #         params.api.forEachNode(function(node) {
+                    #             var rowData = node.data;
+
+                    #             if (rowData.구분 === '당기') {
+                    #                 rowIndex = params.api.getRowNode(node.id).rowIndex;
+                    #             }
+                    #         });
+                    #         var rowspan4 = rowIndex;
+
+                    #         var valRowspan2 = rowspan4 - rowspan3;
+
+                    #         var value = params.data.구분;
+                    #         if (value === '외부요인') {
+                    #             return valRowspan1;
+                    #         } else if (value === '공장요인') {
+                    #             return valRowspan2;
+                    #         } else {
+                    #             return 1;
+                    #         }
+                    #         }         
+                    # """)
+
+                    # colspan = JsCode("""                                             
+                    #     function getColSpan(params) {
+                    #         var value = params.data.구분;
+                    #         if (value === '전기') {
+                    #             return 2;
+                    #         } else if (value === '당기') {
+                    #             return 2;
+                    #         } else {
+                    #             return 1;
+                    #         }
+                    #         }         
+                    # """)
 
                     leftAligned =  {
                         'cellClass': 'ag-center-aligned-cell'
                         }
 
+                    onCellValueChanged = JsCode("\n\n function(e) { \n \
+                        let api = e.api; \n \
+                        api.redrawRows(); \
+                            }; \n \n")
+
                     gridOptions = {
                         'suppressRowTransform': 'true',
+                        'getRowStyle': jscode,
                         "columnDefs": [
                             
-                            { 'field': '구분', 'rowSpan': rowspan, 'cellClassRules': {'cell-span': "value==='외부요인' || value==='공장요인'",}, 'width': 100},
-                            { 'field': '', 'cellRenderer': cell_button_add, 'onCellClicked': JsCode(string_to_add_row)},
-                            { 'field': '항목', },
-                            { 'field': '증가요인', 'wrapText': True, 'autoHeight': True, 'cellStyle': {'white-space': 'normal', 'textAlign': 'left'},},
-                            { 'field': '감소요인' },
-                            { 'field': '계' },
-                            { 'field': ' ' },
+                            
+                            # { 'field': '', 'cellRenderer': cell_button_add, 'onCellClicked': JsCode(string_to_add_row), 'width':50},
+                            { 'field': '구분',  'width': 120, 'editable':True},                            
+                            { 'field': '증가요인', 'wrapText': True, 'autoHeight': True, 'cellEditor':'agLargeTextCellEditor', 'cellStyle': {'white-space': 'pre-wrap', 'textAlign': 'left'}, 'width': 320, 'onCellValueChanged': onCellValueChanged},
+                            { 'field': '감소요인', 'wrapText': True, 'autoHeight': True, 'cellEditor':'agLargeTextCellEditor', 'cellStyle': {'white-space': 'pre-wrap', 'textAlign': 'left'}, 'width': 320, 'onCellValueChanged': onCellValueChanged},
+                            { 'field': '계', 'width':80, 'cellEditorPopup': True },
+                            # { 'field': ' ', 'cellRenderer': cell_button_delete, 'onCellClicked': JsCode(string_to_delete), 'width':60 },
 
                         ],
 
-                        'defaultColDef': {'editable': True,'resizable': True,},
-                        'onCellValueChanged': 'onCellValueChanged',
+                        'defaultColDef': {'editable': True,'resizable': True, 'suppressMenu': True},
+                        'onCellValueChanged':'onCellValueChanged',
+                        'enableRangeSelection':True,
+                        'rowSelection':'single',
+                        'rowMultiSelectWithClick':False,
+                        "domLayout": 'normal',
+
+                        'onCellEditingStarted': JsCode("""
+                            function(event) {
+                                var cellRenderer = event.column.getColDef().cellRenderer;
+                                var eCell = event.node.gridCellInfos.renderedCell;
+                                if (cellRenderer && cellRenderer.prototype.isPopup !== true) {
+                                    // 셀 편집 모드에서 편집 중인 셀의 높이 가져오기
+                                    var cellHeight = eCell.firstChild.offsetHeight;
+                                    // 렌더러에서 처리된 rowSpan 속성 가져오기
+                                    var rowSpan = eCell.firstChild.getAttribute("rowspan");
+                                    if (rowSpan) {
+                                        rowSpan = parseInt(rowSpan);
+                                        // rowspan에 따라 셀의 높이 증가
+                                        cellHeight *= rowSpan;
+                                    }
+                                    eCell.firstChild.style.height = cellHeight + "px";
+                                }
+                            }
+                        """),
+
+                        'onCellEditingStopped': JsCode("""
+                            function(event) {
+                                var cell = event.column.getColDef().field === 'factor' ? event.cell : null;
+                                if (cell) {
+                                    var rowIndex = event.rowIndex;
+                                    var rowSpan = gridOptions.api.getDisplayedRowAtIndex(rowIndex).rowSpan;
+                                    var newHeight = cell.getGui().getBoundingClientRect().height;
+                                    var rowNode = gridOptions.api.getRowNode(rowIndex);
+                                    rowNode.setRowHeight(newHeight);
+                                    rowNode.setDataValue('rowSpan', rowSpan + Math.floor(newHeight / 25));
+                                    
+                                }
+                                event.api.redrawRows();
+                            }
+                        
+                        """)
+
+
                         }                    
-                    
+                    # gridOptions.api.setDomLayout('autoHeight')
                     print(gridOptions)
                     return AgGrid(df, gridOptions=gridOptions, enable_enterprise_modules=True, height=height, fit_columns_on_grid_load=fit_columns_on_grid_load, key=key, allow_unsafe_jscode=True,\
-                        theme='balham', update_mode=GridUpdateMode.NO_UPDATE, custom_css=custom_css, reload_data=True,)
+                        theme='streamlit', update_mode=GridUpdateMode.NO_UPDATE, custom_css=custom_css, reload_data=True,)
 
 
                 col_table_1, col_table_empty1, col_table_2 = st.columns([37,5,58])
@@ -880,7 +1010,7 @@ if uploaded_file is not None:
                 with col_table_empty1:
                     st.empty()
                 with col_table_2:
-                    display_table2(df_anl.reset_index(), fit_columns_on_grid_load=False, sidebar=False, key=f'table_{prod_family[idx]}_2')
+                    display_table2(df_anl.reset_index(), fit_columns_on_grid_load=False, sidebar=False, key=f'table_{prod_family[idx]}_2', height=1200)
              
 
 
@@ -1086,7 +1216,7 @@ if uploaded_file is not None:
                         ),
 
                         go.Bar(name='당기', x=['당기'], y=[fvalue_2],
-                        text=[f'{fvalue_2:,.1f}' if differ >=0 else f'{fvalue_2:,.1f}' ],
+                        text=[f'{fvalue_2:,.1f}'],
                         textposition='outside',
                         textfont_size=18,
                         marker_color='red',
@@ -1229,7 +1359,7 @@ if uploaded_file is not None:
                         ),
 
                         go.Bar(name='당기', x=['당기'], y=[fvalue_2],
-                        text=[f'{fvalue_2:,.0f}' if differ >=0 else f'{fvalue_2:,.0f}' ],
+                        text=[f'{fvalue_2:,.0f}'],
                         textposition='outside',
                         textfont_size=18,
                         marker_color='red',
@@ -1374,7 +1504,7 @@ if uploaded_file is not None:
                         ),
 
                         go.Bar(name='당기', x=['당기'], y=[fvalue_2],
-                        text=[f'{fvalue_2:,.1%}' if differ >=0 else f'{fvalue_2:,.1%}' ],
+                        text=[f'{fvalue_2:,.1%}'],
                         textposition='outside',
                         textfont_size=18,
                         marker_color='red',
@@ -1519,7 +1649,7 @@ if uploaded_file is not None:
                         ),
 
                         go.Bar(name='당기', x=['당기'], y=[fvalue_2],
-                        text=[f'{fvalue_2:,.0f}' if differ >=0 else f'{fvalue_2:,.0f}' ],
+                        text=[f'{fvalue_2:,.0f}'],
                         textposition='outside',
                         textfont_size=18,
                         marker_color='red',
